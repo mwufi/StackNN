@@ -27,6 +27,7 @@ class Stack(nn.Module):
 		self.batch_size = batch_size
 		self.embedding_size = embedding_size
 
+	@profile
 	def forward(self, v, u, d):
 		"""
 		@param v [batch_size, embedding_size] matrix to push
