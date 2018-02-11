@@ -21,13 +21,44 @@ class Stack(nn.Module):
 
 		# TODO either make everything a variable
 		# TODO or implement custom backward pass function
+		# I chose the first approach :)
 
 		self.zero = Variable(torch.zeros(batch_size))
 
 		self.batch_size = batch_size
 		self.embedding_size = embedding_size
+	
+	def read(self):
+		"""
+		it's just like pop(1)!
+		"""
+		weights = self.s - self.pop(Variable(torch.ones(self.batch_size), requires_grad=False))
+		r = torch.sum(self.V * weights, 0)
+		return r
 
-	@profile
+	def pop(self, w):
+		s = self.s
+		# note: we do this bc pytorch doesn't support reverse slice
+		# if s has NO dimensions, s.size(0) won't work
+		if len(s.size()) == 0:
+			return s			
+		
+		idx = [i for i in range(s.size(0)-1, -1, -1)] 
+
+		top = s[idx]
+		top = torch.cumsum(top, 0) - w # this is what pop looks like
+		top[top<0] = 0
+
+		# to get out of summed weights
+		if len(idx) > 1:
+			reverse_sum = torch.cat((torch.zeros_like(top[:1]), top[:-1]), 0)
+			top -= reverse_sum 
+			s = top[idx]
+
+		return s
+
+	# TODO initialize stack to fixed size
+
 	def forward(self, v, u, d):
 		"""
 		@param v [batch_size, embedding_size] matrix to push
@@ -36,32 +67,18 @@ class Stack(nn.Module):
 		@return [batch_size, embedding_size] read matrix
 		"""
 
-		# update V, which is of size [t, bach_size, embedding_size]
+		# update self.V
 		v = v.view(1, self.batch_size, self.embedding_size)
 		self.V = torch.cat([self.V, v], 0) if len(self.V.data) != 0 else v
 
-		# TODO initialize stack to fixed size
+		# If we create a new variable every time it goes forward, this means that we're not learning about what u should be ... I don't get this
+		# w = Variable(torch.FloatTensor(u.data), requires_grad=False)
 
-		# update s, which is of size [t, batch_size]
-		old_t = self.s.data.shape[0] if self.s.data.shape else 0
-		s = Variable(torch.FloatTensor(old_t + 1, self.batch_size))
-		w = Variable(torch.FloatTensor(u.data), requires_grad=False)
-		for i in reversed(xrange(old_t)):
-			s_ = F.relu(self.s[i,:] - w)
-			w = F.relu(w - self.s[i,:])
-			s[i,:] = s_
-			# if len(torch.nonzero(w.data)) == 0: break
-			# FIXME above line shouldn't make things go crazy
-		s[old_t,:] = d
-		self.s = s
+		s = self.pop(u) 		# [t, batch_size]
+		s_data = torch.cat((s.data, d.data), 0) 	# [t+1, batch_size]
+		self.s = Variable(s_data) # we don't need to backprop here, do we?
 
-		# calculate r, which is of size [batch_size, embedding_size]
-		r = Variable(torch.zeros([self.batch_size, self.embedding_size]))
-		for i in reversed(xrange(old_t + 1)):
-			used = torch.sum(self.s[i + 1:old_t + 1,:], 0) if i < old_t else self.zero
-			coeffs = torch.min(self.s[i,:], F.relu(1 - used))
-			# reformating coeffs into a matrix that can be multiplied element-wise
-			r += coeffs.view(self.batch_size, 1).repeat(1, self.embedding_size) * self.V[i,:,:]
+		r = self.read()
 		return r
 
 	def log(self):
