@@ -50,7 +50,6 @@ train_Y = [map(longT, X) for X in train_Y]
 dev_Y = [map(longT, X) for X in dev_Y]
 test_Y = [map(longT, X) for X in test_Y]
 
-@profile
 def train(train_X, train_Y):
 	model.train()
 	total_loss = 0.
@@ -115,3 +114,39 @@ for epoch in xrange(EPOCHS):
 	train_X, train_Y = shuffle(train_X, train_Y)
 	train(train_X, train_Y)
 	evaluate(dev_X, dev_Y)
+
+
+
+"""
+What I'm worried about is that I'm not doing backwards pass properly?
+
+hyperparameters: lr=0.01, batch_size=10, read_dim=1
+-- starting epoch 0 --
+batch 0: loss=0.69, acc=0.48
+batch 10: loss=0.69, acc=0.47
+batch 20: loss=0.69, acc=0.55
+batch 30: loss=0.69, acc=0.43
+batch 40: loss=0.69, acc=0.55
+batch 50: loss=0.69, acc=0.52
+batch 60: loss=0.69, acc=0.59
+batch 70: loss=0.69, acc=0.60
+epoch 0: loss=0.69, acc=0.51
+-- starting epoch 1 --
+batch 0: loss=0.69, acc=0.56
+batch 10: loss=0.69, acc=0.54
+batch 20: loss=0.69, acc=0.45
+batch 30: loss=0.69, acc=0.48
+batch 40: loss=0.69, acc=0.50
+batch 50: loss=0.68, acc=0.64
+batch 60: loss=0.68, acc=0.53
+batch 70: loss=0.69, acc=0.51
+epoch 1: loss=0.68, acc=0.60
+-- starting epoch 2 --
+batch 0: loss=0.68, acc=0.63
+batch 10: loss=0.69, acc=0.53
+batch 20: loss=0.69, acc=0.55
+batch 30: loss=0.68, acc=0.57
+batch 40: loss=0.68, acc=0.63
+batch 50: loss=0.67, acc=0.59
+batch 60: loss=0.67, acc=0.61
+"""

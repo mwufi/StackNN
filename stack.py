@@ -32,8 +32,11 @@ class Stack(nn.Module):
 		"""
 		it's just like pop(1)!
 		"""
-		weights = self.s - self.pop(Variable(torch.ones(self.batch_size), requires_grad=False))
-		r = torch.sum(self.V * weights, 0)
+		weights = self.s - self.pop(Variable(torch.ones(self.batch_size), requires_grad=False)) # [t, batch_size]
+		weights.unsqueeze_(-1)
+		weights.unsqueeze_(-1)
+		t = weights.expand(*self.V.size()) * self.V
+		r = torch.sum(t, 0) # [batch_size, embedding_size]
 		return r
 
 	def pop(self, w):
@@ -47,18 +50,20 @@ class Stack(nn.Module):
 
 		top = s[idx]
 		top = torch.cumsum(top, 0) - w # this is what pop looks like
-		top[top<0] = 0
+		top = top.clamp(min=0)
 
 		# to get out of summed weights
 		if len(idx) > 1:
+			# print idx
 			reverse_sum = torch.cat((torch.zeros_like(top[:1]), top[:-1]), 0)
-			top -= reverse_sum 
+			top -= reverse_sum 		
 			s = top[idx]
 
 		return s
 
 	# TODO initialize stack to fixed size
 
+	@profile
 	def forward(self, v, u, d):
 		"""
 		@param v [batch_size, embedding_size] matrix to push
@@ -123,3 +128,35 @@ if __name__ == "__main__":
 	print "\n\n"
 	stack.log()
 	print "read", out
+
+	""" Expected Output:
+
+Running stack tests..
+[Empty stack]
+
+
+
+1.      |       0.80
+read Variable containing:
+ 0.8000
+[torch.FloatTensor of size 1x1]
+
+
+
+
+1.      |       0.70
+2.      |       0.50
+read Variable containing:
+ 1.5000
+[torch.FloatTensor of size 1x1]
+
+
+
+
+1.      |       0.30
+2.      |       0.00
+3.      |       0.90
+read Variable containing:
+ 2.8000
+[torch.FloatTensor of size 1x1]
+"""
