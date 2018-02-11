@@ -25,7 +25,7 @@ class FFController(nn.Module):
 		self.linear = nn.Linear(embedding_size + read_size, 2 + read_size + output_size)
 		self.linear.weight.data.uniform_(-.1, .1)
 		self.linear.bias.data.fill_(0)
-		
+	
 	def forward(self, x):
 		# print x.shape, self.read.shape
 		hidden = self.embed(x)

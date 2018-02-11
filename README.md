@@ -1,11 +1,10 @@
-# StackNN
-A PyTorch implementation of differentiable stacks for use in neural networks. Inspired by https://arxiv.org/pdf/1506.02516.pdf.
 ![neural stack](/assets/figure_1.jpg)
 
-## How to use
+# StackNN
+A PyTorch implementation of differentiable stacks. Inspired by https://arxiv.org/pdf/1506.02516.pdf.
 
-To train the stack model 
-on various tasks, here is what you need to know:
+## How to use
+To train the stack model on various tasks, here is what you need to know:
 
 * stack.py implements the stack data structure.
 * model.py implements a feed-forward controller network. You should

@@ -50,6 +50,7 @@ train_Y = [map(longT, X) for X in train_Y]
 dev_Y = [map(longT, X) for X in dev_Y]
 test_Y = [map(longT, X) for X in test_Y]
 
+@profile
 def train(train_X, train_Y):
 	model.train()
 	total_loss = 0.
