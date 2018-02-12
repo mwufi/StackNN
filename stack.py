@@ -1,3 +1,5 @@
+from __future__ import print_function
+
 import torch
 import torch.autograd as autograd
 from torch.autograd import Variable
@@ -32,19 +34,22 @@ class Stack(nn.Module):
 		"""
 		it's just like pop(1)!
 		"""
-		weights = self.s - self.pop(Variable(torch.ones(self.batch_size), requires_grad=False)) # [t, batch_size]
-		weights.unsqueeze_(-1)
+		ones = Variable(torch.ones(self.batch_size), requires_grad=False)
+		res= self.pop(ones)
+
+		weights = self.s - res # [t, batch_size]
 		weights.unsqueeze_(-1)
 		t = weights.expand(*self.V.size()) * self.V
 		r = torch.sum(t, 0) # [batch_size, embedding_size]
+
 		return r
 
 	def pop(self, w):
-		s = self.s
+		s = Variable(torch.FloatTensor(self.s.data))
 		# note: we do this bc pytorch doesn't support reverse slice
 		# if s has NO dimensions, s.size(0) won't work
 		if len(s.size()) == 0:
-			return s			
+			return s		
 		
 		idx = [i for i in range(s.size(0)-1, -1, -1)] 
 
@@ -57,13 +62,12 @@ class Stack(nn.Module):
 			# print idx
 			reverse_sum = torch.cat((torch.zeros_like(top[:1]), top[:-1]), 0)
 			top -= reverse_sum 		
-			s = top[idx]
+		s = top[idx]
 
 		return s
 
 	# TODO initialize stack to fixed size
 
-	@profile
 	def forward(self, v, u, d):
 		"""
 		@param v [batch_size, embedding_size] matrix to push
@@ -77,13 +81,20 @@ class Stack(nn.Module):
 		self.V = torch.cat([self.V, v], 0) if len(self.V.data) != 0 else v
 
 		# If we create a new variable every time it goes forward, this means that we're not learning about what u should be ... I don't get this
-		# w = Variable(torch.FloatTensor(u.data), requires_grad=False)
+		w = Variable(torch.FloatTensor(u.data), requires_grad=False)
 
-		s = self.pop(u) 		# [t, batch_size]
-		s_data = torch.cat((s.data, d.data), 0) 	# [t+1, batch_size]
-		self.s = Variable(s_data) # we don't need to backprop here, do we?
+		s = self.pop(w) 		# [t, batch_size]
+		if len(s.data) == 0:
+			if len(d.size()) == 1:
+				dummy = Variable(d.data.unsqueeze_(-1))
+			else:
+				dummy = d
+			self.s  = dummy
+		else:
+			self.s  = torch.cat((s, d), 0) 	# [t+1, batch_size]
 
 		r = self.read()
+		# r.register_hook(print)
 		return r
 
 	def log(self):
@@ -92,16 +103,16 @@ class Stack(nn.Module):
 		"""
 		V = self.V.data
 		if not V.shape:
-			print "[Empty stack]"
+			print("[Empty stack]")
 			return
 		for b in xrange(self.batch_size):
 			if b > 0:
-				print "----------------------------"
+				print("----------------------------")
 			for i in xrange(V.shape[0]):
-				print "{:.2}\t|\t{:.2f}".format("\t".join(str(x) for x in V[i, b,:]), self.s[i, b].data[0])
+				print("{:.2}\t|\t{:.2f}".format("\t".join(str(x) for x in V[i, b,:]), self.s[i, b].data[0]))
 
 if __name__ == "__main__":
-	print "Running stack tests.."
+	print("Running stack tests..")
 	stack = Stack(1, 1)
 	stack.log()
 	out = stack.forward(
@@ -109,25 +120,25 @@ if __name__ == "__main__":
 		Variable(torch.FloatTensor([[0]])),
 		Variable(torch.FloatTensor([[.8]])),
 	)
-	print "\n\n"
+	print("\n\n")
 	stack.log()
-	print "read", out
+	print("read", out)
 	out = stack.forward(
 		Variable(torch.FloatTensor([[2]])),
 		Variable(torch.FloatTensor([[.1]])),
 		Variable(torch.FloatTensor([[.5]])),
 	)
-	print "\n\n"
+	print("\n\n")
 	stack.log()
-	print "read", out
+	print("read", out)
 	out = stack.forward(
 		Variable(torch.FloatTensor([[3]])),
 		Variable(torch.FloatTensor([[.9]])),
 		Variable(torch.FloatTensor([[.9]])),
 	)
-	print "\n\n"
+	print( "\n\n")
 	stack.log()
-	print "read", out
+	print ("read", out)
 
 	""" Expected Output:
 
